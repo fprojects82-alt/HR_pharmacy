@@ -1,0 +1,856 @@
+/* ═══════════════════════════════════════════════
+   GLOBAL STYLES — Nour HR System
+   Design tokens live in desktop.css (component-scoped).
+   This file handles PrimeNG overrides and shared patterns.
+   ═══════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+  font-family: 'Beiruti', sans-serif;
+  font-size: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: 'Beiruti', sans-serif;
+  font-size: 15px;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: url("/photos/bg.png") no-repeat center center;
+  background-size: cover;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+/* ═══════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════ */
+.p-toast .p-toast-message-content {
+  direction: rtl;
+  text-align: right;
+}
+
+.p-toast .p-toast-summary,
+.p-toast .p-toast-detail {
+  text-align: right;
+}
+
+.p-toast .p-toast-message {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 12px;
+}
+
+.p-toast .p-toast-message.p-toast-message-success {
+  background: #ecfdf5 !important;
+  border-color: #16a34a !important;
+}
+
+.p-toast .p-toast-message.p-toast-message-error {
+  background: #fef2f2 !important;
+  border-color: #dc2626 !important;
+}
+
+.p-toast .p-toast-message.p-toast-message-warn {
+  background: #fffbeb !important;
+  border-color: #d97706 !important;
+}
+
+.p-toast .p-toast-message.p-toast-message-info {
+  background: #eff6ff !important;
+  border-color: #2563eb !important;
+}
+
+/* ═══════════════════════════════════════════════
+   DATA TABLE
+   ═══════════════════════════════════════════════ */
+.p-datatable {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  background: var(--surface-strong) !important;
+  border-bottom: 2px solid var(--surface-border);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 12px 10px;
+  color: var(--text) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  background: transparent;
+  transition: background 160ms ease;
+  color: var(--text);
+  text-align: center;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  text-align: center;
+  padding: 10px 8px !important;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.p-datatable .p-datatable-tbody > tr:hover > td {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  box-shadow: inset 3px 0 0 var(--primary, #0d8a8a);
+}
+
+.p-cell-editor .p-inputtext {
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
+}
+
+/* ═══════════════════════════════════════════════
+   PAGINATOR
+   ═══════════════════════════════════════════════ */
+.p-paginator {
+  padding: 6px 8px !important;
+  font-size: 0.85rem;
+  background: var(--surface) !important;
+  border-top: 1px solid var(--surface-border);
+  backdrop-filter: blur(10px);
+}
+
+.p-paginator .p-paginator-page.p-highlight,
+.p-paginator-page.p-paginator-page-selected {
+  background-color: var(--primary, #0d8a8a) !important;
+  border-color: var(--primary, #0d8a8a) !important;
+  color: #fff !important;
+  border-radius: 8px;
+}
+
+.p-paginator .p-paginator-page:not(.p-highlight):hover {
+  background: var(--primary-light, rgba(13, 138, 138, 0.1));
+  color: var(--primary, #0d8a8a);
+}
+
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-prev {
+  color: var(--text);
+}
+
+.p-paginator .p-paginator-next:hover,
+.p-paginator .p-paginator-prev:hover {
+  background: var(--primary-light, rgba(13, 138, 138, 0.1));
+}
+
+.p-paginator .p-select {
+  border-radius: 8px;
+}
+
+.p-select-label {
+  padding: 0.3rem 0.5rem !important;
+  border-radius: 8px;
+}
+
+.p-paginator-rpp-dropdown .p-select-label {
+  font-size: 0.85rem;
+}
+
+/* ═══════════════════════════════════════════════
+   SELECT DROPDOWN
+   ═══════════════════════════════════════════════ */
+.p-select-dropdown,
+.p-select-label {
+  width: auto !important;
+}
+
+.p-select-option.p-select-option-selected.p-focus {
+  background: var(--primary, #0d8a8a);
+  color: var(--text);
+}
+
+.select-panel {
+  border-radius: 12px !important;
+  background: var(--surface-strong) !important;
+  font-size: 0.9rem;
+}
+
+.select-panel .p-select-label {
+  color: var(--text) !important;
+  font-size: 0.9rem !important;
+}
+
+.select-panel .p-select-option {
+  color: var(--text) !important;
+  background: var(--surface) !important;
+}
+
+.select-overlay {
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid var(--surface-border);
+}
+
+.select-overlay .p-select-option {
+  padding: 0.5rem !important;
+  font-weight: 500;
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.select-overlay .p-select-option:hover {
+  background: var(--primary-light, rgba(13, 138, 138, 0.1)) !important;
+}
+
+.select-overlay .p-select-option-selected {
+  background: var(--primary-light, rgba(13, 138, 138, 0.15)) !important;
+  color: var(--primary, #0d8a8a) !important;
+  font-weight: 600;
+}
+
+.select-overlay .select-list-container {
+  background: var(--surface-strong) !important;
+  padding: 0 !important;
+}
+
+.select-overlay .p-select-header {
+  padding: 0.3rem;
+  background: var(--surface-strong) !important;
+}
+
+/* ═══════════════════════════════════════════════
+   DIALOG
+   ═══════════════════════════════════════════════ */
+.p-dialog {
+  border: 1px solid var(--surface-border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15) !important;
+}
+
+.p-dialog-header {
+  flex-direction: row-reverse !important;
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--surface-border) !important;
+  padding: 12px 16px !important;
+}
+
+.p-dialog-content {
+  padding: 16px !important;
+  background: var(--surface-strong) !important;
+  color: var(--text);
+}
+
+.p-icon {
+  color: var(--text-soft) !important;
+}
+
+/* ═══════════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════════ */
+.p-tab {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: 8px 8px 0 0 !important;
+  padding: 8px 12px !important;
+  font-size: 0.85rem;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.p-tab-active {
+  background: var(--primary, #0d8a8a) !important;
+  color: #fff !important;
+  border: 1px solid var(--primary, #0d8a8a) !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.p-tablist {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+}
+
+.p-tabpanels {
+  background: var(--surface) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: 0 0 12px 12px !important;
+  padding: 12px !important;
+  color: var(--text) !important;
+}
+
+.p-tablist-tab-list {
+  gap: 4px !important;
+}
+
+/* ═══════════════════════════════════════════════
+   MULTISELECT
+   ═══════════════════════════════════════════════ */
+.p-multiselect {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  color: var(--text);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.p-multiselect:hover {
+  border-color: var(--primary, #0d8a8a);
+}
+
+.p-multiselect.p-focus {
+  border-color: var(--primary, #0d8a8a);
+  box-shadow: 0 0 0 2px var(--primary-light, rgba(13, 138, 138, 0.15));
+}
+
+.p-multiselect-label {
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.p-multiselect-label.p-placeholder {
+  color: var(--text-muted, #94a3b8);
+}
+
+.p-multiselect-trigger {
+  color: var(--text);
+  width: 2.5rem;
+}
+
+.p-multiselect-trigger-icon {
+  font-size: 0.85rem;
+}
+
+.p-multiselect-chip {
+  background: var(--primary, #0d8a8a);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  margin: 2px;
+}
+
+.p-multiselect-chip .p-multiselect-chip-icon {
+  color: #fff;
+  margin-right: 4px;
+}
+
+.p-multiselect-chip-item.p-focus {
+  box-shadow: 0 0 0 2px var(--primary-light, rgba(13, 138, 138, 0.15));
+  border-radius: 6px;
+}
+
+.p-multiselect-overlay {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  z-index: 10000 !important;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.p-multiselect-header {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--surface-border) !important;
+  padding: 8px 10px !important;
+}
+
+.p-multiselect-filter-container input {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+}
+
+.p-multiselect-list-container {
+  background: var(--surface-strong) !important;
+  padding: 4px;
+  max-height: 250px;
+}
+
+.p-multiselect-list {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.p-multiselect-option {
+  background: transparent !important;
+  color: var(--text) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.p-multiselect-option:hover {
+  background: var(--hover, rgba(0, 0, 0, 0.04)) !important;
+}
+
+.p-multiselect-option.p-multiselect-option-selected {
+  background: var(--primary-light, rgba(13, 138, 138, 0.1)) !important;
+  color: var(--primary, #0d8a8a) !important;
+  font-weight: 600;
+}
+
+.p-multiselect-option.p-focus {
+  background: var(--hover, rgba(0, 0, 0, 0.04)) !important;
+}
+
+.p-multiselect-option .p-checkbox {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+}
+
+.p-multiselect-option .p-checkbox-box {
+  width: 20px !important;
+  height: 20px !important;
+  border: 2px solid var(--surface-border) !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+}
+
+.p-multiselect-option .p-checkbox-box.p-highlight {
+  background: var(--primary, #0d8a8a) !important;
+  border-color: var(--primary, #0d8a8a) !important;
+}
+
+.p-multiselect-option .p-checkbox-icon {
+  color: #fff !important;
+  font-size: 11px !important;
+}
+
+.p-multiselect-empty-message {
+  color: var(--text-muted, #94a3b8) !important;
+  text-align: center;
+  padding: 16px !important;
+}
+
+.p-multiselect-list-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.p-multiselect-list-container::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+  border-radius: 10px;
+}
+
+.p-multiselect-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════
+   CONFIRM DIALOG
+   ═══════════════════════════════════════════════ */
+.p-confirmdialog {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  backdrop-filter: blur(12px);
+  background: var(--surface-strong) !important;
+  border: 1px solid var(--surface-border) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15) !important;
+}
+
+.p-confirmdialog .p-dialog-header {
+  background: var(--surface-strong) !important;
+  border-bottom: 1px solid var(--surface-border) !important;
+  color: var(--text) !important;
+  padding: 12px 16px !important;
+}
+
+.p-confirmdialog .p-dialog-content {
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  padding: 16px !important;
+}
+
+.p-confirmdialog-message {
+  color: var(--text) !important;
+  line-height: 1.7;
+  font-size: 0.9rem;
+}
+
+.p-confirmdialog .p-dialog-footer {
+  background: transparent !important;
+  border-top: 1px solid var(--surface-border) !important;
+  padding: 10px 16px !important;
+}
+
+.p-confirmdialog .p-button {
+  border-radius: 8px !important;
+  font-size: 0.85rem;
+}
+
+.p-confirmdialog-reject-button {
+  background: var(--surface) !important;
+  border: 1px solid var(--surface-border) !important;
+  color: var(--text) !important;
+}
+
+.p-confirmdialog-accept-button {
+  background: var(--danger-bg, rgba(220, 38, 38, 0.12)) !important;
+  border: 1px solid var(--danger, #dc2626) !important;
+  color: var(--danger, #dc2626) !important;
+}
+
+.p-confirmdialog-icon {
+  color: var(--warning, #d97706) !important;
+  font-size: 1.75rem !important;
+}
+
+/* ═══════════════════════════════════════════════
+   FORMS
+   ═══════════════════════════════════════════════ */
+.panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 12px;
+}
+
+.panel h3,
+.panel p {
+  margin: 0;
+}
+
+.panel p {
+  color: var(--text-soft);
+  max-width: 52ch;
+}
+
+.custom-input {
+  padding: 8px 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  font-size: 0.9rem;
+  background: var(--surface-strong);
+}
+
+.custom-input:focus {
+  border-color: var(--primary, #0d8a8a);
+  box-shadow: 0 0 0 2px var(--primary-light, rgba(13, 138, 138, 0.12));
+}
+
+.custom-input option {
+  color: var(--text);
+  padding: 8px;
+  background: var(--surface-strong);
+}
+
+.custom-input select {
+  color: var(--text);
+  background: var(--surface-strong);
+}
+
+.p-inputtext {
+  border-radius: 8px !important;
+  background: var(--surface-strong) !important;
+  color: var(--text) !important;
+  font-size: 0.9rem !important;
+}
+
+.p-tag {
+  font-size: 0.8rem !important;
+}
+
+.p-datepicker-input {
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.p-select-filter {
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form input,
+.form select {
+  padding: 8px 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: var(--surface-strong, rgba(255, 255, 255, 0.08));
+  color: inherit;
+  outline: none;
+  font-size: 0.9rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.form input:focus,
+.form select:focus {
+  border-color: var(--primary, #0d8a8a);
+  box-shadow: 0 0 0 2px var(--primary-light, rgba(13, 138, 138, 0.12));
+}
+
+.form button {
+  height: 42px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: var(--primary-light, rgba(13, 138, 138, 0.12));
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.form button:hover {
+  background: var(--primary, #0d8a8a);
+  color: #fff;
+}
+
+.form select option {
+  background: var(--surface);
+}
+
+.form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  width: auto;
+  margin: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  color: var(--text-soft);
+  padding-inline-start: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════
+   PASSWORD FIELD
+   ═══════════════════════════════════════════════ */
+.password-field .input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-inline-end: 40px;
+}
+
+.password-field i {
+  position: absolute;
+  left: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-soft);
+  transition: color 160ms ease;
+}
+
+.password-field i:hover {
+  color: var(--primary, #0d8a8a);
+}
+
+/* ═══════════════════════════════════════════════
+   GRID FORM
+   ═══════════════════════════════════════════════ */
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.full {
+  grid-column: span 3;
+}
+
+@media (max-width: 900px) {
+  .grid-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .full {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-form {
+    grid-template-columns: 1fr;
+  }
+  .full {
+    grid-column: span 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   PASSWORD RULES
+   ═══════════════════════════════════════════════ */
+.password-rules {
+  display: flex;
+  list-style: none;
+  gap: 16px;
+  padding: 0;
+  margin: 4px 4px;
+  font-size: 0.78rem;
+}
+
+.password-rules li {
+  color: var(--text-muted, #94a3b8);
+  transition: color 160ms ease;
+}
+
+.password-rules li.valid {
+  color: var(--success, #16a34a);
+}
+
+/* ═══════════════════════════════════════════════
+   MENU
+   ═══════════════════════════════════════════════ */
+.p-menu {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden;
+}
+
+.p-menu-list {
+  direction: rtl;
+  background: var(--surface-strong, rgba(255, 255, 255, 0.92));
+  border-radius: 12px;
+  color: inherit;
+  font-size: 0.9rem;
+  padding: 4px !important;
+}
+
+.p-menu-item-icon {
+  font-size: 1rem;
+  color: var(--text-soft) !important;
+}
+
+.p-menu-item-link {
+  padding: 8px 14px !important;
+}
+
+.p-menu-item-content {
+  border-radius: 8px !important;
+}
+
+/* ═══════════════════════════════════════════════
+   BADGES
+   ═══════════════════════════════════════════════ */
+.badge {
+  background: var(--surface, rgba(222, 221, 221, 0.75));
+  color: var(--text) !important;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+/* ═══════════════════════════════════════════════
+   ACTION BUTTONS
+   ═══════════════════════════════════════════════ */
+.apply-btn {
+  height: 42px;
+  min-width: 100px;
+  border: none !important;
+  border-radius: 8px !important;
+  background: var(--primary, #0d8a8a) !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  font-weight: 500;
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 2px 8px rgba(13, 138, 138, 0.2);
+}
+
+.apply-btn:hover {
+  background: var(--primary-hover, #0a7070) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 138, 138, 0.3);
+}
+
+.apply-btn .pi {
+  font-size: 0.8rem;
+  margin-inline-end: 6px;
+}
+
+.download-btn {
+  height: 42px;
+  min-width: 100px;
+  border: none !important;
+  border-radius: 8px !important;
+  background: var(--success, #16a34a) !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  font-weight: 500;
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);
+}
+
+.download-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.download-btn .pi {
+  font-size: 0.8rem;
+  margin-inline-end: 6px;
+}
+
+.btn-sm {
+  font-size: 0.85rem !important;
+}
+
+/* ═══════════════════════════════════════════════
+   MISC PRIMING
+   ═══════════════════════════════════════════════ */
+.pi {
+  font-size: 1rem !important;
+}
+
+.p-message-text {
+  font-size: 0.9rem !important;
+}
+
+.p-message-content {
+  padding: 6px 10px !important;
+}
+
+.p-datepicker-input {
+  width: 100%;
+}
