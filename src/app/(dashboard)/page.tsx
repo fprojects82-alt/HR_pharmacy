@@ -3,9 +3,10 @@
 import { useAuthStore } from '@/stores/auth-store'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { DonutChart, BarChart, AreaChart } from '@/components/charts'
-import { Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, ArrowUpRight, ChevronLeft } from 'lucide-react'
 
 interface Stats {
   totalEmployees: number
@@ -105,12 +106,12 @@ export default function DashboardPage() {
   }, [lang])
 
   const statCards = [
-    { label: t('activeEmployees'), value: stats.totalEmployees, icon: <Users size={20} />, from: 'from-blue-500', to: 'to-blue-600' },
-    { label: t('branches'), value: stats.totalBranches, icon: <Building2 size={20} />, from: 'from-emerald-500', to: 'to-emerald-600' },
-    { label: t('openShifts'), value: stats.activeShifts, icon: <Clock size={20} />, from: 'from-amber-500', to: 'to-amber-600' },
-    { label: t('pendingHolidays'), value: stats.pendingHolidays, icon: <Plane size={20} />, from: 'from-purple-500', to: 'to-purple-600' },
-    { label: t('pendingOvertime'), value: stats.pendingOvertime, icon: <Timer size={20} />, from: 'from-orange-500', to: 'to-orange-600' },
-    { label: t('newComplaints'), value: stats.pendingComplaints, icon: <MessageSquare size={20} />, from: 'from-rose-500', to: 'to-rose-600' },
+    { label: t('activeEmployees'), value: stats.totalEmployees, icon: <Users size={20} />, from: 'from-blue-500', to: 'to-blue-600', href: '/employees' },
+    { label: t('branches'), value: stats.totalBranches, icon: <Building2 size={20} />, from: 'from-emerald-500', to: 'to-emerald-600', href: '/branches' },
+    { label: t('openShifts'), value: stats.activeShifts, icon: <Clock size={20} />, from: 'from-amber-500', to: 'to-amber-600', href: '/attendance' },
+    { label: t('pendingHolidays'), value: stats.pendingHolidays, icon: <Plane size={20} />, from: 'from-purple-500', to: 'to-purple-600', href: '/orders/holidays' },
+    { label: t('pendingOvertime'), value: stats.pendingOvertime, icon: <Timer size={20} />, from: 'from-orange-500', to: 'to-orange-600', href: '/orders/overtime' },
+    { label: t('newComplaints'), value: stats.pendingComplaints, icon: <MessageSquare size={20} />, from: 'from-rose-500', to: 'to-rose-600', href: '/complaints' },
   ]
 
   const card = 'bg-[var(--card)] rounded-2xl border border-slate-200 dark:border-slate-800 p-5'
@@ -124,16 +125,24 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('overview')}</p>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards (clickable) */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {statCards.map((c, i) => (
-          <div key={c.label} className={`${card} animate-fade-up`} style={{ animationDelay: `${i * 0.05}s` }}>
-            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${c.from} ${c.to} flex items-center justify-center text-white mb-3 shadow-lg`}>
-              {c.icon}
+          <Link
+            key={c.label}
+            href={c.href}
+            className={`${card} animate-fade-up group hover:border-emerald-400 dark:hover:border-emerald-600 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer`}
+            style={{ animationDelay: `${i * 0.05}s` }}
+          >
+            <div className="flex items-start justify-between">
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${c.from} ${c.to} flex items-center justify-center text-white mb-3 shadow-lg`}>
+                {c.icon}
+              </div>
+              <ChevronLeft size={16} className="text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 rtl:rotate-0 ltr:rotate-180 transition" />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{loading ? '—' : c.value}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-tight">{c.label}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

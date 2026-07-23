@@ -3,21 +3,15 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
+import { useLanguage } from '@/lib/i18n/language-provider'
 import { Plus, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-interface Appointment {
-  id: number
-  employee_id: number
-  date: string
-  time: string | null
-  reason: string | null
-  status: string
-  employees?: { full_name: string } | null
-}
+interface Appointment { id: number; employee_id: number; date: string; time: string | null; reason: string | null; status: string; employees?: { full_name: string } | null }
 
 export default function AppointmentsPage() {
   const { profile } = useAuthStore()
+  const { t } = useLanguage()
   const [records, setRecords] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -25,63 +19,60 @@ export default function AppointmentsPage() {
   const supabase = createClient()
   const isAdmin = profile?.role && ['admin', 'hr'].includes(profile.role)
 
-  const fetchRecords = async () => {
-    let query = supabase.from('appointments').select('*, employees(full_name)').order('created_at', { ascending: false })
-    if (!isAdmin && profile?.employee_id) query = query.eq('employee_id', profile.employee_id)
-    const { data } = await query
+  const load = async () => {
+    let q = supabase.from('appointments').select('*, employees(full_name)').order('created_at', { ascending: false })
+    if (!isAdmin && profile?.employee_id) q = q.eq('employee_id', profile.employee_id)
+    const { data } = await q
     setRecords(data || [])
     setLoading(false)
   }
-
-  useEffect(() => { fetchRecords() }, [profile])
+  useEffect(() => { load() }, [profile])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile?.employee_id) { toast.error('لا يوجد ملف موظف'); return }
+    if (!profile?.employee_id) { toast.error(t('noProfile')); return }
     const { error } = await supabase.from('appointments').insert({ employee_id: profile.employee_id, date: form.date, time: form.time || null, reason: form.reason || null })
-    if (error) { toast.error('فشل'); return }
-    toast.success('تم تقديم طلب الموعد')
-    setShowForm(false); setForm({ date: '', time: '', reason: '' }); fetchRecords()
+    if (error) { toast.error(t('failed')); return }
+    toast.success(t('submitted'))
+    setShowForm(false); setForm({ date: '', time: '', reason: '' }); load()
+  }
+  const act = async (id: number, status: 'approved' | 'rejected') => {
+    const { error } = await supabase.from('appointments').update({ status, approved_by: profile?.id, approved_at: new Date().toISOString() }).eq('id', id)
+    if (error) { toast.error(t('failed')); return }
+    toast.success(status === 'approved' ? t('approvedMsg') : t('rejectedMsg')); load()
   }
 
-  const handleAction = async (id: number, action: 'approved' | 'rejected') => {
-    const { error } = await supabase.from('appointments').update({ status: action, approved_by: profile?.id, approved_at: new Date().toISOString() }).eq('id', id)
-    if (error) { toast.error('فشل'); return }
-    toast.success(action === 'approved' ? 'تمت الموافقة' : 'تم الرفض'); fetchRecords()
-  }
-
-  const statusLabel = (s: string) => s === 'pending' ? 'معلق' : s === 'approved' ? 'موافق' : 'مرفوض'
+  const statusLabel = (s: string) => s === 'pending' ? t('pending') : s === 'approved' ? t('approved') : t('rejected')
   const statusColor = (s: string) => s === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : s === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500'
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">المواعيد</h1>
-        {profile?.employee_id && (
-          <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium transition"><Plus size={18} /> طلب موعد</button>
-        )}
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('appointments')}</h1>
+        {profile?.employee_id && <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium transition"><Plus size={18} /> {t('requestAppointment')}</button>}
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-[var(--card)] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50">
+            <thead className="bg-slate-50 dark:bg-slate-800/50">
               <tr>
-                {isAdmin && <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">الموظف</th>}
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">التاريخ</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">الوقت</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">السبب</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">الحالة</th>
-                {isAdmin && <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">إجراءات</th>}
+                {isAdmin && <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('employee')}</th>}
+                <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('date')}</th>
+                <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('time')}</th>
+                <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('reason')}</th>
+                <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('status')}</th>
+                {isAdmin && <th className="px-4 py-3 text-start font-medium text-slate-600 dark:text-slate-300">{t('actions')}</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">جاري التحميل...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">{t('loading')}</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">لا يوجد طلبات</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">{t('noData')}</td></tr>
               ) : records.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   {isAdmin && <td className="px-4 py-3 text-slate-900 dark:text-white">{r.employees?.full_name || '-'}</td>}
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.date}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.time || '-'}</td>
@@ -91,8 +82,8 @@ export default function AppointmentsPage() {
                     <td className="px-4 py-3">
                       {r.status === 'pending' && (
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleAction(r.id, 'approved')} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600"><Check size={16} /></button>
-                          <button onClick={() => handleAction(r.id, 'rejected')} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><X size={16} /></button>
+                          <button onClick={() => act(r.id, 'approved')} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600"><Check size={16} /></button>
+                          <button onClick={() => act(r.id, 'rejected')} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><X size={16} /></button>
                         </div>
                       )}
                     </td>
@@ -106,24 +97,15 @@ export default function AppointmentsPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md p-6">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-5">طلب موعد</h2>
+          <div className="bg-[var(--card)] rounded-2xl w-full max-w-md p-6">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-5">{t('requestAppointment')}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">التاريخ *</label>
-                <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الوقت</label>
-                <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">السبب</label>
-                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" rows={3} />
-              </div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('date')} *</label><input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls} /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('time')}</label><input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className={inputCls} /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('reason')}</label><textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputCls} rows={3} /></div>
               <div className="flex items-center gap-3 pt-2">
-                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">تقديم</button>
-                <button type="button" onClick={() => setShowForm(false)} className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl text-sm font-medium transition">إلغاء</button>
+                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">{t('submit')}</button>
+                <button type="button" onClick={() => setShowForm(false)} className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl text-sm font-medium transition">{t('cancel')}</button>
               </div>
             </form>
           </div>
