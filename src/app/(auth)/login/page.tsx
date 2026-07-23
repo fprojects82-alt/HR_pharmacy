@@ -23,11 +23,21 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(t('invalidCredentials'))
       setLoading(false)
       return
+    }
+    // Block accounts still awaiting admin approval
+    if (data.user) {
+      const { data: prof } = await supabase.from('profiles').select('is_active').eq('id', data.user.id).single()
+      if (prof && prof.is_active === false) {
+        await supabase.auth.signOut()
+        setError(t('pendingApproval'))
+        setLoading(false)
+        return
+      }
     }
     router.push('/')
     router.refresh()

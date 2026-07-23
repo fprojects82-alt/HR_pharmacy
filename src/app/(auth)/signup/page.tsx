@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus, Sun, Moon, Languages } from 'lucide-react'
+import { UserPlus, Sun, Moon, Languages, ShieldCheck, Briefcase } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { useTheme } from '@/components/theme-provider'
 
@@ -12,6 +11,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'hr' | 'admin'>('hr')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -23,21 +23,38 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName, username: email } },
-    })
-    if (error) {
-      setError(t('signupFailed') + error.message)
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/signup`
+      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+        body: JSON.stringify({ email, password, full_name: fullName, role }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || j.error) { setError(t('signupFailed') + (j.error || res.statusText)); setLoading(false); return }
+      setSuccess(true)
       setLoading(false)
-      return
+      setTimeout(() => router.push('/login'), 2500)
+    } catch (err) {
+      setError(t('signupFailed') + String(err))
+      setLoading(false)
     }
-    setSuccess(true)
-    setLoading(false)
-    setTimeout(() => router.push('/login'), 1500)
   }
+
+  const roleBtn = (r: 'hr' | 'admin', icon: React.ReactNode, label: string) => (
+    <button
+      type="button"
+      onClick={() => setRole(r)}
+      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition ${
+        role === r
+          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+          : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+      }`}
+    >
+      {icon} {label}
+    </button>
+  )
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 relative overflow-hidden">
@@ -64,11 +81,18 @@ export default function SignupPage() {
           </div>
 
           {success ? (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl text-sm text-center">
-              {t('signupSuccess')}
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-4 py-4 rounded-xl text-sm text-center">
+              {t('signupPending')}
             </div>
           ) : (
             <form onSubmit={handleSignup} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('accountType')}</label>
+                <div className="flex gap-2">
+                  {roleBtn('hr', <Briefcase size={16} />, t('hr'))}
+                  {roleBtn('admin', <ShieldCheck size={16} />, t('admin'))}
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('fullName')}</label>
                 <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition" required />
