@@ -6,8 +6,8 @@ import { useLanguage } from '@/lib/i18n/language-provider'
 import { Plus, Trash2, CalendarDays } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-interface Schedule { id: number; employee_id: number; day_of_week: number; start_time: string; end_time: string; is_off: boolean; employees?: { full_name: string } | null }
-interface EmpRow { employee_id: number; name: string; days: Record<number, Schedule> }
+interface Schedule { id: number; employee_id: number; day_of_week: number; start_time: string; end_time: string; is_off: boolean; employees?: { full_name: string; job_title: string | null } | null }
+interface EmpRow { employee_id: number; name: string; role: string; days: Record<number, Schedule> }
 
 const palette = [
   'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
@@ -30,10 +30,10 @@ export default function SchedulesPage() {
   const dayNames = tm('days')
 
   const load = async () => {
-    const { data } = await supabase.from('schedules').select('*, employees(full_name)').order('employee_id').order('day_of_week')
+    const { data } = await supabase.from('schedules').select('*, employees(full_name, job_title)').order('employee_id').order('day_of_week')
     const map = new Map<number, EmpRow>()
-    ;(data || []).forEach((s: Schedule) => {
-      if (!map.has(s.employee_id)) map.set(s.employee_id, { employee_id: s.employee_id, name: s.employees?.full_name || '-', days: {} })
+    ;(data as unknown as Schedule[] || []).forEach((s) => {
+      if (!map.has(s.employee_id)) map.set(s.employee_id, { employee_id: s.employee_id, name: s.employees?.full_name || '-', role: s.employees?.job_title || '', days: {} })
       map.get(s.employee_id)!.days[s.day_of_week] = s
     })
     setRows([...map.values()])
@@ -104,8 +104,8 @@ export default function SchedulesPage() {
                             </div>
                           ) : (
                             <div className={`rounded-lg border px-2 py-1.5 text-[11px] relative group ${palette[ri % palette.length]}`}>
-                              <div className="font-semibold tabular-nums">{s.start_time.slice(0, 5)}</div>
-                              <div className="tabular-nums opacity-80">{s.end_time.slice(0, 5)}</div>
+                              <div className="font-semibold tabular-nums">{s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}</div>
+                              {row.role && <div className="opacity-75 truncate">{row.role.split(' - ')[0]}</div>}
                               <button onClick={() => del(s.id)} className="absolute top-0.5 end-0.5 opacity-0 group-hover:opacity-100 text-red-500"><Trash2 size={11} /></button>
                             </div>
                           )

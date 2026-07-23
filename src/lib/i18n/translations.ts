@@ -79,6 +79,7 @@ export const translations = {
     noTasks: 'لا توجد مهام',
     completed: 'مكتمل',
     quickActions: 'إجراءات سريعة',
+    needApproval: 'بانتظار موافقتك',
     // common
     add: 'إضافة',
     edit: 'تعديل',
@@ -310,6 +311,7 @@ export const translations = {
     noTasks: 'No tasks',
     completed: 'Completed',
     quickActions: 'Quick Actions',
+    needApproval: 'Need Your Approval',
     add: 'Add',
     edit: 'Edit',
     delete: 'Delete',

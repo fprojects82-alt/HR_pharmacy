@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useLanguage } from '@/lib/i18n/language-provider'
-import { Plus, Check, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { StatusControl } from '@/components/status-control'
 
 interface BorrowRequest { id: number; employee_id: number; amount: number; reason: string | null; status: string; employees?: { full_name: string } | null }
 
@@ -36,10 +37,10 @@ export default function BorrowsPage() {
     toast.success(t('submitted'))
     setShowForm(false); setForm({ amount: '', reason: '' }); load()
   }
-  const act = async (id: number, status: 'approved' | 'rejected') => {
+  const setStatus = async (id: number, status: 'approved' | 'rejected' | 'pending') => {
     const { error } = await supabase.from('borrow_requests').update({ status, approved_by: profile?.id, approved_at: new Date().toISOString() }).eq('id', id)
     if (error) { toast.error(t('failed')); return }
-    toast.success(status === 'approved' ? t('approvedMsg') : t('rejectedMsg')); load()
+    toast.success(t(status === 'approved' ? 'approvedMsg' : status === 'rejected' ? 'rejectedMsg' : 'updated')); load()
   }
 
   const statusLabel = (s: string) => s === 'pending' ? t('pending') : s === 'approved' ? t('approved') : t('rejected')
@@ -77,14 +78,7 @@ export default function BorrowsPage() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.reason || '-'}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${statusColor(r.status)}`}>{statusLabel(r.status)}</span></td>
                   {isAdmin && (
-                    <td className="px-4 py-3">
-                      {r.status === 'pending' && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => act(r.id, 'approved')} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600"><Check size={16} /></button>
-                          <button onClick={() => act(r.id, 'rejected')} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><X size={16} /></button>
-                        </div>
-                      )}
-                    </td>
+                    <td className="px-4 py-3"><StatusControl value={r.status} onChange={(s) => setStatus(r.id, s)} /></td>
                   )}
                 </tr>
               ))}

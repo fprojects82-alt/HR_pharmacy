@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useLanguage } from '@/lib/i18n/language-provider'
-import { Plus, Check, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { StatusControl } from '@/components/status-control'
 
 interface Holiday {
   id: number; employee_id: number; start_date: string; end_date: string; reason: string | null
@@ -41,20 +42,13 @@ export default function HolidaysPage() {
     setShowForm(false); setForm({ start_date: '', end_date: '', reason: '' }); load()
   }
 
-  const approve = async (id: number) => {
-    const field = profile?.role === 'area_manager' ? 'area_manager_approved' : 'hr_approved'
-    const rec = records.find((r) => r.id === id)
-    const upd: Record<string, unknown> = { [field]: true }
-    if (field === 'hr_approved') { upd.hr_approved_by = profile?.id; upd.hr_approved_at = new Date().toISOString(); if (rec?.area_manager_approved) upd.status = 'approved' }
-    else { upd.area_manager_approved_by = profile?.id; upd.area_manager_approved_at = new Date().toISOString(); if (rec?.hr_approved) upd.status = 'approved' }
-    const { error } = await supabase.from('holidays').update(upd).eq('id', id)
+  const setStatus = async (id: number, status: 'approved' | 'rejected' | 'pending') => {
+    const { error } = await supabase.from('holidays').update({
+      status, hr_approved: status === 'approved', area_manager_approved: status === 'approved',
+      hr_approved_by: profile?.id, hr_approved_at: new Date().toISOString(),
+    }).eq('id', id)
     if (error) { toast.error(t('failed')); return }
-    toast.success(t('approvedMsg')); load()
-  }
-  const reject = async (id: number) => {
-    const { error } = await supabase.from('holidays').update({ status: 'rejected' }).eq('id', id)
-    if (error) { toast.error(t('failed')); return }
-    toast.success(t('rejectedMsg')); load()
+    toast.success(t(status === 'approved' ? 'approvedMsg' : status === 'rejected' ? 'rejectedMsg' : 'updated')); load()
   }
 
   const statusLabel = (s: string) => s === 'pending' ? t('pending') : s === 'approved' ? t('approved') : t('rejected')
@@ -94,14 +88,7 @@ export default function HolidaysPage() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.reason || '-'}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${statusColor(r.status)}`}>{statusLabel(r.status)}</span></td>
                   {isAdmin && (
-                    <td className="px-4 py-3">
-                      {r.status === 'pending' && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => approve(r.id)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600"><Check size={16} /></button>
-                          <button onClick={() => reject(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><X size={16} /></button>
-                        </div>
-                      )}
-                    </td>
+                    <td className="px-4 py-3"><StatusControl value={r.status} onChange={(s) => setStatus(r.id, s)} /></td>
                   )}
                 </tr>
               ))}
