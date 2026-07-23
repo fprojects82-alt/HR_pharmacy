@@ -1,9 +1,27 @@
-# Dependencies
-node_modules/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
 
-# Build output
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
 dist/
-.angular/
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.log
+npm-debug.log*
+
+# local env files
+.env*.local
+.env.local
 
 # IDE
 .vscode/
@@ -11,10 +29,8 @@ dist/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
+# vercel
+.vercel
 
-# Misc
-*.log
-npm-debug.log*
+# typescript
+*.tsbuildinfo

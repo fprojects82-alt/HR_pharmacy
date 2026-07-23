@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { AuthProvider } from '@/components/auth-provider'
-import { Toaster } from 'react-hot-toast'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
-  title: 'نظام نور للموارد البشرية',
-  description: 'نظام إدارة الموارد البشرية - نور',
+  title: 'نظام نور للموارد البشرية | Nour HR System',
+  description: 'نظام إدارة الموارد البشرية - نور | Nour HR Management System',
 }
 
 export default function RootLayout({
@@ -14,12 +13,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ar" dir="rtl" className="h-full">
-      <body className="min-h-full font-sans antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+    <html lang="ar" dir="rtl" className="h-full" suppressHydrationWarning>
+      <body className="min-h-full font-sans antialiased" suppressHydrationWarning>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

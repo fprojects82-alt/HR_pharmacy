@@ -1,8 +1,0 @@
-.sticky-header {
-  position: static;
-  top: 0;
-  z-index: 1000;
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  padding: 4px 0;
-}

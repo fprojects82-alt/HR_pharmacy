@@ -1,143 +1,175 @@
 'use client'
 
 import { useAuthStore } from '@/stores/auth-store'
+import { useLanguage } from '@/lib/i18n/language-provider'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Users,
-  Building2,
-  Clock,
-  Plane,
-  Timer,
-  MessageSquare,
-  TrendingUp,
-  AlertCircle,
-} from 'lucide-react'
+import { DonutChart, BarChart, AreaChart } from '@/components/charts'
+import { Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, ArrowUpRight } from 'lucide-react'
 
-interface DashboardStats {
+interface Stats {
   totalEmployees: number
   totalBranches: number
   activeShifts: number
   pendingHolidays: number
   pendingOvertime: number
   pendingComplaints: number
+  byType: { key: string; value: number }[]
+  status: { approved: number; pending: number; rejected: number }
+  monthly: { label: string; value: number }[]
+}
+
+const empty: Stats = {
+  totalEmployees: 0, totalBranches: 0, activeShifts: 0, pendingHolidays: 0, pendingOvertime: 0, pendingComplaints: 0,
+  byType: [], status: { approved: 0, pending: 0, rejected: 0 }, monthly: [],
 }
 
 export default function DashboardPage() {
   const { profile } = useAuthStore()
-  const [stats, setStats] = useState<DashboardStats>({
-    totalEmployees: 0,
-    totalBranches: 0,
-    activeShifts: 0,
-    pendingHolidays: 0,
-    pendingOvertime: 0,
-    pendingComplaints: 0,
-  })
+  const { t, tm, lang } = useLanguage()
+  const [stats, setStats] = useState<Stats>(empty)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const run = async () => {
       const supabase = createClient()
+      const cnt = async (build: PromiseLike<{ count: number | null }>): Promise<number> => {
+        const { count } = await build
+        return count ?? 0
+      }
+      const base = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true })
 
-      const [employees, branches, shifts, holidays, overtime, complaints] = await Promise.all([
-        supabase.from('employees').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('branches').select('id', { count: 'exact', head: true }),
-        supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-        supabase.from('holidays').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('complaints').select('id', { count: 'exact', head: true }).eq('is_seen', false),
+      const [
+        employees, branches, shifts, ph, po, pc,
+        holidaysT, overtimeT, borrowsT, resignationsT, appointmentsT, complaintsT,
+        appr, pend, rej,
+      ] = await Promise.all([
+        cnt(base('employees').eq('is_active', true)),
+        cnt(base('branches')),
+        cnt(base('attendance').eq('status', 'open')),
+        cnt(base('holidays').eq('status', 'pending')),
+        cnt(base('overtime_requests').eq('status', 'pending')),
+        cnt(base('complaints').eq('is_seen', false)),
+        cnt(base('holidays')), cnt(base('overtime_requests')), cnt(base('borrow_requests')),
+        cnt(base('resignations')), cnt(base('appointments')), cnt(base('complaints')),
+        cnt(base('holidays').eq('status', 'approved')),
+        cnt(base('holidays').eq('status', 'pending')),
+        cnt(base('holidays').eq('status', 'rejected')),
       ])
 
+      // monthly activity: last 6 months of holiday + overtime requests
+      const since = new Date()
+      since.setMonth(since.getMonth() - 5)
+      since.setDate(1)
+      const [{ data: hd }, { data: od }] = await Promise.all([
+        supabase.from('holidays').select('created_at').gte('created_at', since.toISOString()).limit(1000),
+        supabase.from('overtime_requests').select('created_at').gte('created_at', since.toISOString()).limit(1000),
+      ])
+      const buckets: Record<string, number> = {}
+      const monthsArr = tm('months')
+      const labels: { key: string; label: string }[] = []
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date()
+        d.setMonth(d.getMonth() - i)
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        buckets[key] = 0
+        labels.push({ key, label: monthsArr[d.getMonth()] })
+      }
+      ;[...(hd || []), ...(od || [])].forEach((r) => {
+        const d = new Date((r as { created_at: string }).created_at)
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        if (key in buckets) buckets[key]++
+      })
+
       setStats({
-        totalEmployees: employees.count || 0,
-        totalBranches: branches.count || 0,
-        activeShifts: shifts.count || 0,
-        pendingHolidays: holidays.count || 0,
-        pendingOvertime: overtime.count || 0,
-        pendingComplaints: complaints.count || 0,
+        totalEmployees: employees,
+        totalBranches: branches,
+        activeShifts: shifts,
+        pendingHolidays: ph,
+        pendingOvertime: po,
+        pendingComplaints: pc,
+        byType: [
+          { key: 'holidays', value: holidaysT },
+          { key: 'overtime', value: overtimeT },
+          { key: 'borrows', value: borrowsT },
+          { key: 'resignations', value: resignationsT },
+          { key: 'appointments', value: appointmentsT },
+          { key: 'complaints', value: complaintsT },
+        ],
+        status: { approved: appr, pending: pend, rejected: rej },
+        monthly: labels.map((l) => ({ label: l.label, value: buckets[l.key] })),
       })
       setLoading(false)
     }
-
-    fetchStats()
-  }, [])
+    run().catch(() => setLoading(false))
+  }, [lang])
 
   const statCards = [
-    { label: 'الموظفين النشطين', value: stats.totalEmployees, icon: <Users size={22} />, color: 'bg-blue-500' },
-    { label: 'الفروع', value: stats.totalBranches, icon: <Building2 size={22} />, color: 'bg-emerald-500' },
-    { label: 'ورديات مفتوحة', value: stats.activeShifts, icon: <Clock size={22} />, color: 'bg-amber-500' },
-    { label: 'إجازات معلقة', value: stats.pendingHolidays, icon: <Plane size={22} />, color: 'bg-purple-500' },
-    { label: 'إضافي معلق', value: stats.pendingOvertime, icon: <Timer size={22} />, color: 'bg-orange-500' },
-    { label: 'شكاوى جديدة', value: stats.pendingComplaints, icon: <MessageSquare size={22} />, color: 'bg-red-500' },
+    { label: t('activeEmployees'), value: stats.totalEmployees, icon: <Users size={20} />, from: 'from-blue-500', to: 'to-blue-600' },
+    { label: t('branches'), value: stats.totalBranches, icon: <Building2 size={20} />, from: 'from-emerald-500', to: 'to-emerald-600' },
+    { label: t('openShifts'), value: stats.activeShifts, icon: <Clock size={20} />, from: 'from-amber-500', to: 'to-amber-600' },
+    { label: t('pendingHolidays'), value: stats.pendingHolidays, icon: <Plane size={20} />, from: 'from-purple-500', to: 'to-purple-600' },
+    { label: t('pendingOvertime'), value: stats.pendingOvertime, icon: <Timer size={20} />, from: 'from-orange-500', to: 'to-orange-600' },
+    { label: t('newComplaints'), value: stats.pendingComplaints, icon: <MessageSquare size={20} />, from: 'from-rose-500', to: 'to-rose-600' },
   ]
 
+  const card = 'bg-[var(--card)] rounded-2xl border border-slate-200 dark:border-slate-800 p-5'
+
   return (
-    <div>
-      <div className="mb-8">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          مرحباً، {profile?.full_name || 'المستخدم'}
+          {t('welcome')}، {profile?.full_name || ''}
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على النظام</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('overview')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {statCards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                  {loading ? '...' : card.value}
-                </p>
-              </div>
-              <div className={`${card.color} w-11 h-11 rounded-xl flex items-center justify-center text-white`}>
-                {card.icon}
-              </div>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {statCards.map((c, i) => (
+          <div key={c.label} className={`${card} animate-fade-up`} style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${c.from} ${c.to} flex items-center justify-center text-white mb-3 shadow-lg`}>
+              {c.icon}
             </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{loading ? '—' : c.value}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-tight">{c.label}</p>
           </div>
         ))}
       </div>
 
-      {profile?.role && ['admin', 'hr'].includes(profile.role) && (
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp size={20} className="text-emerald-600" />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">ملخص سريع</h2>
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`${card} lg:col-span-2`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={18} className="text-emerald-600" />
+              <h2 className="font-semibold text-slate-900 dark:text-white">{t('monthlyActivity')}</h2>
             </div>
-            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              <p>إجمالي الموظفين النشطين: {stats.totalEmployees}</p>
-              <p>عدد الفروع: {stats.totalBranches}</p>
-              <p>الطلبات المعلقة: {stats.pendingHolidays + stats.pendingOvertime}</p>
-            </div>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <ArrowUpRight size={14} /> {stats.monthly.reduce((s, m) => s + m.value, 0)} {t('totalRequests')}
+            </span>
           </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle size={20} className="text-amber-500" />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">تنبيهات</h2>
-            </div>
-            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              {stats.pendingComplaints > 0 && (
-                <p className="text-red-600 dark:text-red-400">
-                  يوجد {stats.pendingComplaints} شكوى جديدة تحتاج مراجعة
-                </p>
-              )}
-              {stats.pendingHolidays > 0 && (
-                <p className="text-purple-600 dark:text-purple-400">
-                  يوجد {stats.pendingHolidays} طلب إجازة بانتظار الموافقة
-                </p>
-              )}
-              {stats.pendingHolidays === 0 && stats.pendingComplaints === 0 && (
-                <p className="text-emerald-600 dark:text-emerald-400">لا توجد تنبيهات حالياً</p>
-              )}
-            </div>
-          </div>
+          <AreaChart data={stats.monthly.length ? stats.monthly : [{ label: '-', value: 0 }]} />
         </div>
-      )}
+
+        <div className={card}>
+          <h2 className="font-semibold text-slate-900 dark:text-white mb-4">{t('requestStatus')}</h2>
+          <DonutChart
+            centerLabel={t('totalRequests')}
+            data={[
+              { label: t('approved'), value: stats.status.approved, color: '#10b981' },
+              { label: t('pending'), value: stats.status.pending, color: '#f59e0b' },
+              { label: t('rejected'), value: stats.status.rejected, color: '#ef4444' },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Requests by type */}
+      <div className={card}>
+        <h2 className="font-semibold text-slate-900 dark:text-white mb-5">{t('requestsByType')}</h2>
+        <BarChart data={stats.byType.map((b) => ({ label: t(b.key as Parameters<typeof t>[0]), value: b.value }))} />
+      </div>
     </div>
   )
 }
