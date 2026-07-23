@@ -58,6 +58,31 @@ export function DonutChart({ data, centerLabel, centerValue }: { data: DonutSlic
   )
 }
 
+export function ProgressRing({ value, max = 100, color = '#10b981', label, sub }: { value: number; max?: number; color?: string; label?: string; sub?: string }) {
+  const pct = Math.min(value / (max || 1), 1)
+  const r = 52
+  const circ = 2 * Math.PI * r
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative w-[140px] h-[140px]">
+        <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
+          <circle cx="70" cy="70" r={r} fill="none" stroke="currentColor" strokeWidth="12" className="text-slate-100 dark:text-slate-700" />
+          <circle
+            cx="70" cy="70" r={r} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+            strokeDasharray={`${circ * pct} ${circ}`}
+            style={{ transition: 'stroke-dasharray 0.9s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{Math.round(pct * 100)}%</span>
+          {label && <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>}
+        </div>
+      </div>
+      {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{sub}</p>}
+    </div>
+  )
+}
+
 export function BarChart({ data, color = '#10b981' }: { data: { label: string; value: number }[]; color?: string }) {
   const max = Math.max(...data.map((d) => d.value), 1)
   return (
