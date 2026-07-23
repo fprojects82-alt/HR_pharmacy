@@ -143,11 +143,16 @@ export default function DashboardPage() {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 p-6 sm:p-8 text-white">
         <div className="absolute -top-8 -end-8 w-48 h-48 bg-white/10 rounded-full" />
         <div className="absolute -bottom-12 -end-16 w-56 h-56 bg-white/5 rounded-full" />
-        <div className="relative flex items-center justify-between gap-4">
-          <div>
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="min-w-0">
             <p className="text-emerald-100 text-sm mb-1">{new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            <h1 className="text-2xl sm:text-3xl font-bold">{greeting}، {profile?.full_name || ''} 👋</h1>
-            <p className="text-emerald-100 mt-2 text-sm max-w-lg">{t('overview')}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 flex-wrap">{greeting}، {profile?.full_name || ''} <span>👋</span></h1>
+            <p className="text-emerald-100 mt-2 text-sm">{t('overview')}</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.totalEmployees}</b> {t('employees')}</span>
+              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.pendingHolidays + stats.pendingOvertime}</b> {t('pending')}</span>
+              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.activeShifts}</b> {t('openShifts')}</span>
+            </div>
           </div>
           <div className="hidden sm:flex w-20 h-20 rounded-3xl bg-white/15 backdrop-blur items-center justify-center flex-shrink-0">
             <Pill size={36} className="text-white" />

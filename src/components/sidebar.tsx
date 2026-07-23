@@ -8,7 +8,7 @@ import type { TranslationKey } from '@/lib/i18n/translations'
 import {
   LayoutDashboard, Users, Building2, Landmark, Calendar, Clock, DollarSign, Star, Plane,
   HandCoins, Timer, UserX, CalendarClock, AlarmClock, MessageSquare, Package, Newspaper,
-  FileText, LogOut, X, ShieldCheck, Pill,
+  FileText, LogOut, X, ShieldCheck, Pill, Rocket,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -22,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: 'dashboard', href: '/', icon: <LayoutDashboard size={19} /> },
   { key: 'employees', href: '/employees', icon: <Users size={19} /> },
+  { key: 'onboarding', href: '/onboarding', icon: <Rocket size={19} /> },
   { key: 'branches', href: '/branches', icon: <Building2 size={19} /> },
   { key: 'banks', href: '/banks', icon: <Landmark size={19} /> },
   { key: 'attendance', href: '/attendance', icon: <Clock size={19} /> },
