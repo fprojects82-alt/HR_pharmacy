@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { useAuthStore } from '@/stores/auth-store'
@@ -9,6 +9,19 @@ import { Menu } from 'lucide-react'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuthStore()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem('sidebarCollapsed') === '1')
+  }, [])
+
+  const toggleCollapse = () => {
+    setCollapsed((c) => {
+      const next = !c
+      localStorage.setItem('sidebarCollapsed', next ? '1' : '0')
+      return next
+    })
+  }
 
   if (isLoading) {
     return (
@@ -20,16 +33,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <div className="lg:ms-64">
-        <div className="flex items-center">
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="lg:hidden fixed top-3 z-20 ms-4 w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--card)] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300"
-          >
-            <Menu size={20} />
-          </button>
-        </div>
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+      <div className={`transition-[margin] duration-300 ${collapsed ? 'lg:ms-[76px]' : 'lg:ms-64'}`}>
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="lg:hidden fixed top-3 z-40 ms-4 w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--card)] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300"
+        >
+          <Menu size={20} />
+        </button>
         <Header />
         <main className="p-4 sm:p-6 max-w-[1400px] mx-auto animate-fade">{children}</main>
       </div>

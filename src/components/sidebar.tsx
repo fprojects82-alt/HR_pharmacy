@@ -8,16 +8,11 @@ import type { TranslationKey } from '@/lib/i18n/translations'
 import {
   LayoutDashboard, Users, Building2, Landmark, Calendar, Clock, DollarSign, Star, Plane,
   HandCoins, Timer, UserX, CalendarClock, AlarmClock, MessageSquare, Package, Newspaper,
-  FileText, LogOut, X, ShieldCheck, Pill, Rocket,
+  FileText, LogOut, X, ShieldCheck, Pill, Rocket, ChevronsLeft,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-interface NavItem {
-  key: TranslationKey
-  href: string
-  icon: React.ReactNode
-  adminOnly?: boolean
-}
+interface NavItem { key: TranslationKey; href: string; icon: React.ReactNode; adminOnly?: boolean }
 
 const navItems: NavItem[] = [
   { key: 'dashboard', href: '/', icon: <LayoutDashboard size={19} /> },
@@ -42,7 +37,9 @@ const navItems: NavItem[] = [
   { key: 'auditLogs', href: '/audit-logs', icon: <FileText size={19} />, adminOnly: true },
 ]
 
-export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: {
+  open: boolean; onClose: () => void; collapsed: boolean; onToggleCollapse: () => void
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const { profile } = useAuthStore()
@@ -58,22 +55,26 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     router.refresh()
   }
 
-  const content = (
+  const content = (mini: boolean) => (
     <>
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-200 dark:border-slate-800">
+      <div className={`flex items-center gap-3 h-16 border-b border-slate-200 dark:border-slate-800 ${mini ? 'px-0 justify-center' : 'px-4'}`}>
         <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-600/20">
           <Pill size={18} className="text-white" />
         </div>
-        <div className="min-w-0">
-          <p className="font-bold text-slate-900 dark:text-white truncate leading-tight">{t('appName')}</p>
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate">{t('pharmacyHr')}</p>
-        </div>
-        <button onClick={onClose} className="ms-auto p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 lg:hidden">
-          <X size={18} />
-        </button>
+        {!mini && (
+          <div className="min-w-0">
+            <p className="font-bold text-slate-900 dark:text-white truncate leading-tight">{t('appName')}</p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate">{t('pharmacyHr')}</p>
+          </div>
+        )}
+        {!mini && (
+          <button onClick={onClose} className="ms-auto p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 lg:hidden">
+            <X size={18} />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
+      <nav className={`flex-1 overflow-y-auto py-3 space-y-0.5 ${mini ? 'px-2' : 'px-2.5'}`}>
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
           return (
@@ -81,26 +82,28 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+              title={mini ? t(item.key) : undefined}
+              className={`flex items-center gap-3 rounded-xl text-sm transition-all ${mini ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'} ${
                 isActive
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium shadow-md shadow-emerald-600/20'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <span className="flex-shrink-0">{item.icon}</span>
-              <span className="truncate">{t(item.key)}</span>
+              {!mini && <span className="truncate">{t(item.key)}</span>}
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800">
+      <div className={`border-t border-slate-200 dark:border-slate-800 ${mini ? 'p-2' : 'p-3'}`}>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          title={mini ? t('logout') : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ${mini ? 'justify-center py-2.5' : 'px-3 py-2.5'}`}
         >
           <LogOut size={19} />
-          <span>{t('logout')}</span>
+          {!mini && <span>{t('logout')}</span>}
         </button>
       </div>
     </>
@@ -108,19 +111,27 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <>
-      {/* Desktop: always visible */}
-      <aside className="hidden lg:flex fixed top-0 bottom-0 start-0 w-64 bg-[var(--card)] border-e border-slate-200 dark:border-slate-800 flex-col z-30">
-        {content}
+      {/* Desktop: collapsible */}
+      <aside className={`hidden lg:flex fixed top-0 bottom-0 start-0 bg-[var(--card)] border-e border-slate-200 dark:border-slate-800 flex-col z-30 transition-[width] duration-300 ${collapsed ? 'w-[76px]' : 'w-64'}`}>
+        {content(collapsed)}
+        {/* collapse toggle */}
+        <button
+          onClick={onToggleCollapse}
+          className="absolute top-20 -end-3 w-6 h-6 rounded-full bg-[var(--card)] border border-slate-200 dark:border-slate-700 shadow flex items-center justify-center text-slate-500 hover:text-emerald-600 z-40"
+          title={t('back')}
+        >
+          <ChevronsLeft size={14} className={`transition-transform ${collapsed ? 'rtl:rotate-0 rotate-180' : 'rtl:rotate-180'}`} />
+        </button>
       </aside>
 
-      {/* Mobile: drawer */}
+      {/* Mobile: drawer (always full) */}
       {open && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={onClose} />}
       <aside
         className={`lg:hidden fixed top-0 bottom-0 start-0 z-50 w-64 bg-[var(--card)] border-e border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-300 ${
           open ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'
         }`}
       >
-        {content}
+        {content(false)}
       </aside>
     </>
   )

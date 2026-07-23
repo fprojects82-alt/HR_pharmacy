@@ -6,9 +6,9 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { StatusControl } from '@/components/status-control'
+import { ApprovalControl } from '@/components/approval-control'
 
-interface Resignation { id: number; employee_id: number; reason: string | null; requested_date: string; status: string; employees?: { full_name: string } | null }
+interface Resignation { id: number; employee_id: number; reason: string | null; requested_date: string; status: string; hr_decision?: string | null; employees?: { full_name: string } | null }
 
 export default function ResignationsPage() {
   const { profile } = useAuthStore()
@@ -77,7 +77,7 @@ export default function ResignationsPage() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.reason || '-'}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${statusColor(r.status)}`}>{statusLabel(r.status)}</span></td>
                   {isAdmin && (
-                    <td className="px-4 py-3"><StatusControl value={r.status} onChange={(s) => setStatus(r.id, s)} /></td>
+                    <td className="px-4 py-3"><ApprovalControl table="resignations" id={r.id} status={r.status} hrDecision={r.hr_decision} onDone={load} /></td>
                   )}
                 </tr>
               ))}

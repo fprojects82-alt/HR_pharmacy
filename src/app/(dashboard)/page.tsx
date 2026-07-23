@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { DonutChart, BarChart, MultiAreaChart, HBarChart, ProgressRing } from '@/components/charts'
-import { StatusControl } from '@/components/status-control'
+import { ApprovalControl } from '@/components/approval-control'
 import {
   Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, TrendingDown, ArrowUpRight, Pill,
   Plane as PlaneIcon, HandCoins, CalendarClock, Landmark, Calendar, DollarSign, Star, UserX, AlarmClock,
@@ -15,7 +15,7 @@ import {
 import type { TranslationKey } from '@/lib/i18n/translations'
 
 interface Activity { id: string; name: string; type: string; date: string; status: string; icon: 'holiday' | 'overtime' | 'borrow' }
-interface Approval { id: number; table: string; name: string; type: string; date: string; status: string }
+interface Approval { id: number; table: string; name: string; type: string; date: string; status: string; hrDecision?: string | null }
 
 interface Stats {
   totalEmployees: number; totalBranches: number; activeShifts: number
@@ -86,8 +86,8 @@ export default function DashboardPage() {
       supabase.from('holidays').select('id, start_date, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
       supabase.from('overtime_requests').select('id, date, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
       supabase.from('borrow_requests').select('id, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
-      supabase.from('holidays').select('id, start_date, status, employees(full_name)').eq('status', 'pending').limit(5),
-      supabase.from('overtime_requests').select('id, date, status, employees(full_name)').eq('status', 'pending').limit(5),
+      supabase.from('holidays').select('id, start_date, status, hr_decision, employees(full_name)').eq('status', 'pending').limit(5),
+      supabase.from('overtime_requests').select('id, date, status, hr_decision, employees(full_name)').eq('status', 'pending').limit(5),
       supabase.from('branches').select('id, name'),
       supabase.from('employees').select('branch_id').eq('is_active', true),
     ])
@@ -115,8 +115,8 @@ export default function DashboardPage() {
       ...mk(recentH as unknown as Row[], 'holiday', 'holidays'), ...mk(recentO as unknown as Row[], 'overtime', 'overtime'), ...mk(recentB as unknown as Row[], 'borrow', 'borrows'),
     ].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6)
 
-    const apRows = (rows: Row[] | null, table: string, typeKey: string): Approval[] =>
-      (rows || []).map((r) => ({ id: r.id, table, name: r.employees?.full_name || '-', type: typeKey, date: r.start_date || r.date || '', status: r.status }))
+    const apRows = (rows: (Row & { hr_decision?: string | null })[] | null, table: string, typeKey: string): Approval[] =>
+      (rows || []).map((r) => ({ id: r.id, table, name: r.employees?.full_name || '-', type: typeKey, date: r.start_date || r.date || '', status: r.status, hrDecision: r.hr_decision }))
     const approvals = [...apRows(apH as unknown as Row[], 'holidays', 'holidays'), ...apRows(apO as unknown as Row[], 'overtime_requests', 'overtime')].slice(0, 5)
 
     const byBranch = (brs || []).map((b: { id: number; name: string }) => ({
@@ -254,7 +254,7 @@ export default function DashboardPage() {
                 <div key={`${a.table}-${a.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{a.name.charAt(0)}</div>
                   <div className="min-w-0 flex-1"><p className="text-sm font-medium text-slate-900 dark:text-white truncate">{a.name}</p><p className="text-xs text-slate-400">{t(a.type as TranslationKey)} · {a.date}</p></div>
-                  <StatusControl value={a.status} onChange={(s) => decide(a.table, a.id, s)} />
+                  <ApprovalControl table={a.table} id={a.id} status={a.status} hrDecision={a.hrDecision} onDone={fetchAll} />
                 </div>
               ))}
           </div>
