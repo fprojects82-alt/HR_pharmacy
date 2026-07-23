@@ -3,17 +3,34 @@
 import { useTheme } from '@/components/theme-provider'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { useAuthStore } from '@/stores/auth-store'
-import { Sun, Moon, Languages } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Sun, Moon, Languages, ArrowLeft } from 'lucide-react'
 
-export function Header({ onMenu }: { onMenu?: () => void }) {
+export function Header() {
   const { theme, toggleTheme } = useTheme()
   const { toggleLang, lang, t } = useLanguage()
   const { profile } = useAuthStore()
+  const pathname = usePathname()
+  const router = useRouter()
 
   const roleLabel = profile?.role === 'admin' ? t('admin') : t('hr')
+  const showBack = pathname !== '/'
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-[var(--card)]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 px-4 sm:px-6">
+      {showBack ? (
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 h-9 ps-2 pe-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition ms-8 lg:ms-0"
+          title={t('back')}
+        >
+          <ArrowLeft size={18} className="rtl:rotate-180" />
+          <span className="hidden sm:inline">{t('back')}</span>
+        </button>
+      ) : (
+        <div className="ms-8 lg:ms-0" />
+      )}
+
       <div className="flex-1" />
 
       <button

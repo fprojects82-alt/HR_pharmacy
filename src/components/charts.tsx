@@ -107,6 +107,93 @@ export function BarChart({ data, color = '#8b5cf6' }: { data: { label: string; v
   )
 }
 
+interface Series { name: string; color: string; data: number[] }
+
+export function MultiAreaChart({ series, labels }: { series: Series[]; labels: string[] }) {
+  const w = 320, h = 150, pad = 8
+  const max = Math.max(...series.flatMap((s) => s.data), 1)
+  const n = labels.length
+  const step = n > 1 ? (w - pad * 2) / (n - 1) : 0
+  const [hover, setHover] = useState<number | null>(null)
+
+  const pathFor = (data: number[]) => {
+    const pts = data.map((v, i) => [pad + i * step, h - pad - (v / max) * (h - pad * 2)])
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')
+    const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${h - pad} L${pts[0][0].toFixed(1)},${h - pad} Z`
+    return { line, area, pts }
+  }
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHover(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - rect.left) / rect.width) * (n - 1)))))
+  }
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-4 mb-2">
+        {series.map((s) => (
+          <span key={s.name} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} /> {s.name}
+          </span>
+        ))}
+      </div>
+      <div className="w-full relative" dir="ltr" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+        {hover !== null && (
+          <div className="absolute -top-1 z-10 bg-slate-900 dark:bg-slate-700 text-white text-xs px-3 py-2 rounded-lg shadow-lg pointer-events-none -translate-x-1/2 space-y-0.5" style={{ left: `${(hover / Math.max(n - 1, 1)) * 100}%` }}>
+            <div className="font-medium mb-1">{labels[hover]}</div>
+            {series.map((s) => (<div key={s.name} className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: s.color }} />{s.name}: <b className="tabular-nums">{s.data[hover]}</b></div>))}
+          </div>
+        )}
+        <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none" style={{ height: 170 }}>
+          <defs>
+            {series.map((s) => (
+              <linearGradient key={s.name} id={`mg-${s.color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={s.color} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+              </linearGradient>
+            ))}
+          </defs>
+          {[0.25, 0.5, 0.75].map((f) => (<line key={f} x1={pad} x2={w - pad} y1={h * f} y2={h * f} stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />))}
+          {series.map((s) => {
+            const { line, area, pts } = pathFor(s.data)
+            return (
+              <g key={s.name}>
+                <path d={area} fill={`url(#mg-${s.color.replace('#', '')})`} />
+                <path d={line} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ strokeDasharray: 1000, animation: 'drawLine 1.2s ease both' }} />
+                {hover !== null && <circle cx={pts[hover][0]} cy={pts[hover][1]} r="4" fill={s.color} stroke="var(--card)" strokeWidth="2" />}
+              </g>
+            )
+          })}
+          {hover !== null && <line x1={pad + hover * step} x2={pad + hover * step} y1={pad} y2={h - pad} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-slate-300 dark:text-slate-600" />}
+        </svg>
+        <div className="flex justify-between mt-1">
+          {labels.map((l, i) => (<span key={i} className={`text-[11px] ${hover === i ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-500 dark:text-slate-400'}`}>{l}</span>))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function HBarChart({ data }: { data: { label: string; value: number; color?: string }[] }) {
+  const max = Math.max(...data.map((d) => d.value), 1)
+  const [hover, setHover] = useState<number | null>(null)
+  const palette = ['#10b981', '#8b5cf6', '#f59e0b', '#3b82f6', '#ef4444', '#14b8a6', '#ec4899']
+  return (
+    <div className="space-y-3">
+      {data.map((d, i) => (
+        <div key={i} className="flex items-center gap-3 cursor-pointer" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+          <span className="text-xs text-slate-600 dark:text-slate-300 w-24 truncate text-end">{d.label}</span>
+          <div className="flex-1 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div className="h-full rounded-lg flex items-center justify-end pe-2 transition-all" style={{ width: `${Math.max((d.value / max) * 100, 6)}%`, background: d.color || palette[i % palette.length], opacity: hover === null || hover === i ? 1 : 0.55, animation: `growBarH 0.7s ease ${i * 0.05}s both` }}>
+              <span className="text-[11px] font-semibold text-white tabular-nums">{d.value}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function AreaChart({ data, color = '#10b981' }: { data: { label: string; value: number }[]; color?: string }) {
   const w = 320, h = 140, pad = 8
   const max = Math.max(...data.map((d) => d.value), 1)

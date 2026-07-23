@@ -5,12 +5,12 @@ import { useLanguage } from '@/lib/i18n/language-provider'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { DonutChart, BarChart, AreaChart, ProgressRing } from '@/components/charts'
+import { DonutChart, BarChart, MultiAreaChart, HBarChart, ProgressRing } from '@/components/charts'
 import { StatusControl } from '@/components/status-control'
 import {
   Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, TrendingDown, ArrowUpRight, Pill,
   Plane as PlaneIcon, HandCoins, CalendarClock, Landmark, Calendar, DollarSign, Star, UserX, AlarmClock,
-  Package, Newspaper, Rocket, ClipboardCheck,
+  Package, Newspaper, Rocket, ClipboardCheck, CheckCircle2,
 } from 'lucide-react'
 import type { TranslationKey } from '@/lib/i18n/translations'
 
@@ -19,16 +19,18 @@ interface Approval { id: number; table: string; name: string; type: string; date
 
 interface Stats {
   totalEmployees: number; totalBranches: number; activeShifts: number
-  pendingHolidays: number; pendingOvertime: number; pendingComplaints: number
+  pendingHolidays: number; pendingOvertime: number; pendingComplaints: number; totalRequests: number
   byType: { key: string; value: number }[]
+  byBranch: { label: string; value: number }[]
   status: { approved: number; pending: number; rejected: number }
-  monthly: { label: string; value: number }[]
+  labels: string[]; reqSeries: number[]; apprSeries: number[]
   trend: number; recent: Activity[]; approvals: Approval[]; onboarding: { done: number; total: number }
 }
 
 const empty: Stats = {
-  totalEmployees: 0, totalBranches: 0, activeShifts: 0, pendingHolidays: 0, pendingOvertime: 0, pendingComplaints: 0,
-  byType: [], status: { approved: 0, pending: 0, rejected: 0 }, monthly: [], trend: 0, recent: [], approvals: [], onboarding: { done: 0, total: 0 },
+  totalEmployees: 0, totalBranches: 0, activeShifts: 0, pendingHolidays: 0, pendingOvertime: 0, pendingComplaints: 0, totalRequests: 0,
+  byType: [], byBranch: [], status: { approved: 0, pending: 0, rejected: 0 }, labels: [], reqSeries: [], apprSeries: [],
+  trend: 0, recent: [], approvals: [], onboarding: { done: 0, total: 0 },
 }
 
 const quickLinks: { key: TranslationKey; href: string; icon: React.ReactNode; color: string }[] = [
@@ -50,6 +52,8 @@ const quickLinks: { key: TranslationKey; href: string; icon: React.ReactNode; co
   { key: 'custody', href: '/custody', icon: <Package size={18} />, color: 'bg-fuchsia-500' },
   { key: 'news', href: '/news', icon: <Newspaper size={18} />, color: 'bg-pink-500' },
 ]
+
+type Row = { id: number; status: string; created_at?: string; start_date?: string; date?: string; employees?: { full_name: string } | null }
 
 export default function DashboardPage() {
   const { profile } = useAuthStore()
@@ -76,58 +80,59 @@ export default function DashboardPage() {
     ])
 
     const since = new Date(); since.setMonth(since.getMonth() - 5); since.setDate(1)
-    const [{ data: hd }, { data: od }, { data: recentH }, { data: recentO }, { data: recentB }, { data: apH }, { data: apO }] = await Promise.all([
-      supabase.from('holidays').select('created_at').gte('created_at', since.toISOString()).limit(1000),
-      supabase.from('overtime_requests').select('created_at').gte('created_at', since.toISOString()).limit(1000),
+    const [{ data: hd }, { data: od }, { data: recentH }, { data: recentO }, { data: recentB }, { data: apH }, { data: apO }, { data: brs }, { data: empBranch }] = await Promise.all([
+      supabase.from('holidays').select('created_at, status').gte('created_at', since.toISOString()).limit(1000),
+      supabase.from('overtime_requests').select('created_at, status').gte('created_at', since.toISOString()).limit(1000),
       supabase.from('holidays').select('id, start_date, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
       supabase.from('overtime_requests').select('id, date, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
       supabase.from('borrow_requests').select('id, status, created_at, employees(full_name)').order('created_at', { ascending: false }).limit(4),
       supabase.from('holidays').select('id, start_date, status, employees(full_name)').eq('status', 'pending').limit(5),
       supabase.from('overtime_requests').select('id, date, status, employees(full_name)').eq('status', 'pending').limit(5),
+      supabase.from('branches').select('id, name'),
+      supabase.from('employees').select('branch_id').eq('is_active', true),
     ])
 
-    const buckets: Record<string, number> = {}
     const monthsArr = tm('months')
-    const labels: { key: string; label: string }[] = []
+    const keys: string[] = [], labels: string[] = []
     for (let i = 5; i >= 0; i--) {
       const d = new Date(); d.setMonth(d.getMonth() - i)
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      buckets[key] = 0; labels.push({ key, label: monthsArr[d.getMonth()] })
+      keys.push(`${d.getFullYear()}-${d.getMonth()}`); labels.push(monthsArr[d.getMonth()])
     }
+    const reqB: Record<string, number> = {}, apprB: Record<string, number> = {}
+    keys.forEach((k) => { reqB[k] = 0; apprB[k] = 0 })
     ;[...(hd || []), ...(od || [])].forEach((r) => {
-      const d = new Date((r as { created_at: string }).created_at)
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      if (key in buckets) buckets[key]++
+      const rr = r as { created_at: string; status: string }
+      const d = new Date(rr.created_at); const k = `${d.getFullYear()}-${d.getMonth()}`
+      if (k in reqB) { reqB[k]++; if (rr.status === 'approved') apprB[k]++ }
     })
-    const monthly = labels.map((l) => ({ label: l.label, value: buckets[l.key] }))
-    const lastV = monthly[monthly.length - 1]?.value || 0, prevV = monthly[monthly.length - 2]?.value || 0
+    const reqSeries = keys.map((k) => reqB[k]), apprSeries = keys.map((k) => apprB[k])
+    const lastV = reqSeries[reqSeries.length - 1] || 0, prevV = reqSeries[reqSeries.length - 2] || 0
     const trend = prevV === 0 ? (lastV > 0 ? 100 : 0) : Math.round(((lastV - prevV) / prevV) * 100)
 
-    type Row = { id: number; status: string; created_at?: string; start_date?: string; date?: string; employees?: { full_name: string } | null }
     const mk = (rows: Row[] | null, icon: Activity['icon'], typeKey: string): Activity[] =>
       (rows || []).map((r) => ({ id: `${icon}-${r.id}`, name: r.employees?.full_name || '-', type: typeKey, date: r.start_date || r.date || r.created_at || '', status: r.status, icon }))
     const recent = [
-      ...mk(recentH as unknown as Row[], 'holiday', 'holidays'),
-      ...mk(recentO as unknown as Row[], 'overtime', 'overtime'),
-      ...mk(recentB as unknown as Row[], 'borrow', 'borrows'),
+      ...mk(recentH as unknown as Row[], 'holiday', 'holidays'), ...mk(recentO as unknown as Row[], 'overtime', 'overtime'), ...mk(recentB as unknown as Row[], 'borrow', 'borrows'),
     ].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6)
 
     const apRows = (rows: Row[] | null, table: string, typeKey: string): Approval[] =>
       (rows || []).map((r) => ({ id: r.id, table, name: r.employees?.full_name || '-', type: typeKey, date: r.start_date || r.date || '', status: r.status }))
-    const approvals = [
-      ...apRows(apH as unknown as Row[], 'holidays', 'holidays'),
-      ...apRows(apO as unknown as Row[], 'overtime_requests', 'overtime'),
-    ].slice(0, 6)
+    const approvals = [...apRows(apH as unknown as Row[], 'holidays', 'holidays'), ...apRows(apO as unknown as Row[], 'overtime_requests', 'overtime')].slice(0, 5)
+
+    const byBranch = (brs || []).map((b: { id: number; name: string }) => ({
+      label: b.name.replace('[DEMO] ', '').split(' - ')[0],
+      value: (empBranch || []).filter((e: { branch_id: number | null }) => e.branch_id === b.id).length,
+    })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 6)
 
     setStats({
       totalEmployees: employees, totalBranches: branches, activeShifts: shifts,
-      pendingHolidays: ph, pendingOvertime: po, pendingComplaints: pc,
+      pendingHolidays: ph, pendingOvertime: po, pendingComplaints: pc, totalRequests: appr + pend + rej,
       byType: [
         { key: 'holidays', value: holidaysT }, { key: 'overtime', value: overtimeT }, { key: 'borrows', value: borrowsT },
         { key: 'resignations', value: resignationsT }, { key: 'appointments', value: appointmentsT }, { key: 'complaints', value: complaintsT },
       ],
-      status: { approved: appr, pending: pend, rejected: rej },
-      monthly, trend, recent, approvals, onboarding: { done: obDone, total: obTotal },
+      byBranch, status: { approved: appr, pending: pend, rejected: rej },
+      labels, reqSeries, apprSeries, trend, recent, approvals, onboarding: { done: obDone, total: obTotal },
     })
     setLoading(false)
   }
@@ -146,15 +151,15 @@ export default function DashboardPage() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? t('goodMorning') : hour < 18 ? t('goodAfternoon') : t('goodEvening')
   const attendancePct = stats.totalEmployees ? Math.round((stats.activeShifts / stats.totalEmployees) * 100) : 0
-  const totalReq = stats.status.approved + stats.status.pending + stats.status.rejected
-  const approvalPct = totalReq ? Math.round((stats.status.approved / totalReq) * 100) : 0
+  const approvalPct = stats.totalRequests ? Math.round((stats.status.approved / stats.totalRequests) * 100) : 0
   const obPct = stats.onboarding.total ? Math.round((stats.onboarding.done / stats.onboarding.total) * 100) : 0
 
-  const tiles = [
-    { label: t('totalEmployees'), value: stats.totalEmployees, icon: <Users size={18} />, bg: 'bg-blue-50 dark:bg-blue-950/40', ring: 'bg-blue-500', href: '/employees', sub: `${stats.totalBranches} ${t('branches')}` },
-    { label: t('pendingHolidays'), value: stats.pendingHolidays, icon: <Plane size={18} />, bg: 'bg-violet-50 dark:bg-violet-950/40', ring: 'bg-violet-500', href: '/orders/holidays', sub: t('pending') },
-    { label: t('pendingOvertime'), value: stats.pendingOvertime, icon: <Timer size={18} />, bg: 'bg-amber-50 dark:bg-amber-950/40', ring: 'bg-amber-500', href: '/orders/overtime', sub: t('pending') },
-    { label: t('newComplaints'), value: stats.pendingComplaints, icon: <MessageSquare size={18} />, bg: 'bg-rose-50 dark:bg-rose-950/40', ring: 'bg-rose-500', href: '/complaints', sub: t('newComplaints') },
+  // Big colorful stat cards (inspiration style)
+  const bigCards = [
+    { label: t('totalEmployees'), value: stats.totalEmployees, icon: <Users size={20} />, bg: 'bg-rose-100 dark:bg-rose-950/40', icon_bg: 'bg-rose-500', badge: `${stats.totalBranches} ${t('branches')}`, badgeCls: 'bg-rose-500/15 text-rose-600 dark:text-rose-300', href: '/employees' },
+    { label: t('attendanceRate'), value: `${attendancePct}%`, icon: <Clock size={20} />, bg: 'bg-sky-100 dark:bg-sky-950/40', icon_bg: 'bg-sky-500', badge: `${stats.activeShifts} ${t('present')}`, badgeCls: 'bg-sky-500/15 text-sky-600 dark:text-sky-300', href: '/attendance' },
+    { label: t('pendingHolidays'), value: stats.pendingHolidays + stats.pendingOvertime, icon: <ClipboardCheck size={20} />, bg: 'bg-amber-100 dark:bg-amber-950/40', icon_bg: 'bg-amber-500', badge: t('pending'), badgeCls: 'bg-amber-500/15 text-amber-600 dark:text-amber-300', href: '/orders/holidays' },
+    { label: t('totalRequests'), value: stats.totalRequests, icon: <CheckCircle2 size={20} />, bg: 'bg-emerald-100 dark:bg-emerald-950/40', icon_bg: 'bg-emerald-500', badge: `${stats.trend >= 0 ? '+' : ''}${stats.trend}%`, badgeCls: stats.trend >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-red-500/15 text-red-500', href: '/orders/holidays', trendIcon: true },
   ]
 
   const card = 'bg-[var(--card)] rounded-2xl border border-slate-200 dark:border-slate-800 p-5'
@@ -173,32 +178,29 @@ export default function DashboardPage() {
             <p className="text-emerald-100 text-sm mb-1">{new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 flex-wrap">{greeting}، {profile?.full_name || ''} <span>👋</span></h1>
             <p className="text-emerald-100 mt-2 text-sm">{t('overview')}</p>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.totalEmployees}</b> {t('employees')}</span>
-              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.pendingHolidays + stats.pendingOvertime}</b> {t('pending')}</span>
-              <span className="bg-white/15 backdrop-blur rounded-xl px-3 py-1.5 text-sm"><b className="tabular-nums">{stats.activeShifts}</b> {t('openShifts')}</span>
-            </div>
           </div>
           <div className="hidden sm:flex w-20 h-20 rounded-3xl bg-white/15 backdrop-blur items-center justify-center flex-shrink-0"><Pill size={36} className="text-white" /></div>
         </div>
       </div>
 
-      {/* Pastel stat tiles */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {tiles.map((tile, i) => (
-          <Link key={tile.label} href={tile.href} className={`${tile.bg} rounded-2xl p-5 border border-transparent hover:border-slate-300 dark:hover:border-slate-700 hover:-translate-y-0.5 transition-all animate-fade-up group`} style={{ animationDelay: `${i * 0.05}s` }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-10 h-10 rounded-xl ${tile.ring} flex items-center justify-center text-white shadow-md`}>{tile.icon}</div>
-              <ArrowUpRight size={16} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition" />
+      {/* Big colorful stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {bigCards.map((c, i) => (
+          <Link key={c.label} href={c.href} className={`${c.bg} rounded-2xl p-5 hover:-translate-y-0.5 transition-transform animate-fade-up`} style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-11 h-11 rounded-2xl ${c.icon_bg} flex items-center justify-center text-white shadow-lg`}>{c.icon}</div>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 ${c.badgeCls}`}>
+                {c.trendIcon && (stats.trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}{c.badge}
+              </span>
             </div>
-            <p className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">{loading ? '—' : tile.value}</p>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mt-1">{tile.label}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{tile.sub}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">{loading ? '—' : c.value}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{c.label}</p>
+            <p className="text-[11px] text-slate-400 mt-2">{t('lastUpdate')}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}</p>
           </Link>
         ))}
       </div>
 
-      {/* Quick access to every page */}
+      {/* Quick access */}
       <div className={card}>
         <h2 className="font-semibold text-slate-900 dark:text-white mb-4">{t('quickActions')}</h2>
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-9 gap-3">
@@ -211,55 +213,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Area chart + attendance gauge */}
+      {/* Payroll/requests dual area + donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className={`${card} lg:col-span-2`}>
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><TrendingUp size={18} className="text-emerald-600" /><h2 className="font-semibold text-slate-900 dark:text-white">{t('monthlyActivity')}</h2></div>
+            <div className="flex items-center gap-2"><TrendingUp size={18} className="text-emerald-600" /><h2 className="font-semibold text-slate-900 dark:text-white">{t('payrollOverview')}</h2></div>
             <span className={`text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-lg ${stats.trend >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30' : 'bg-red-50 text-red-600 dark:bg-red-900/30'}`}>
               {stats.trend >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />} {Math.abs(stats.trend)}% <span className="hidden sm:inline text-slate-400">{t('vsLastMonth')}</span>
             </span>
           </div>
-          <AreaChart data={stats.monthly.length ? stats.monthly : [{ label: '-', value: 0 }]} />
+          <MultiAreaChart labels={stats.labels.length ? stats.labels : ['-']} series={[
+            { name: t('cost'), color: '#10b981', data: stats.reqSeries.length ? stats.reqSeries : [0] },
+            { name: t('approvedReq'), color: '#8b5cf6', data: stats.apprSeries.length ? stats.apprSeries : [0] },
+          ]} />
         </div>
-        <div className={`${card} flex flex-col items-center justify-center`}>
-          <h2 className="font-semibold text-slate-900 dark:text-white mb-2 self-start">{t('attendanceRate')}</h2>
-          <ProgressRing value={attendancePct} label={t('present')} sub={`${stats.activeShifts} / ${stats.totalEmployees} ${t('present')}`} color="#10b981" />
-        </div>
-      </div>
-
-      {/* Need your approval + onboarding progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={`${card} lg:col-span-2`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><ClipboardCheck size={18} className="text-emerald-600" /><h2 className="font-semibold text-slate-900 dark:text-white">{t('needApproval') as string}</h2></div>
-            <span className="text-xs text-slate-400">{stats.approvals.length}</span>
-          </div>
-          <div className="space-y-2">
-            {loading ? <p className="text-sm text-slate-400 text-center py-6">{t('loading')}</p>
-              : stats.approvals.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('noAlerts')}</p>
-              : stats.approvals.map((a) => (
-                <div key={`${a.table}-${a.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{a.name.charAt(0)}</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{a.name}</p>
-                    <p className="text-xs text-slate-400">{t(a.type as TranslationKey)} · {a.date}</p>
-                  </div>
-                  <StatusControl value={a.status} onChange={(s) => decide(a.table, a.id, s)} />
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className={`${card} flex flex-col items-center justify-center`}>
-          <h2 className="font-semibold text-slate-900 dark:text-white mb-2 self-start">{t('onboardingProgress')}</h2>
-          <ProgressRing value={obPct} color="#8b5cf6" label={t('completed')} sub={`${stats.onboarding.done} / ${stats.onboarding.total} ${t('tasksDone')}`} />
-          <Link href="/onboarding" className="mt-2 text-xs text-violet-600 dark:text-violet-400 hover:underline">{t('viewAll')}</Link>
-        </div>
-      </div>
-
-      {/* Donut + bar + activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className={card}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-900 dark:text-white">{t('requestStatus')}</h2>
@@ -270,6 +237,40 @@ export default function DashboardPage() {
             { label: t('pending'), value: stats.status.pending, color: '#f59e0b' },
             { label: t('rejected'), value: stats.status.rejected, color: '#ef4444' },
           ]} />
+        </div>
+      </div>
+
+      {/* Need approval + onboarding */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`${card} lg:col-span-2`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><ClipboardCheck size={18} className="text-emerald-600" /><h2 className="font-semibold text-slate-900 dark:text-white">{t('needApproval')}</h2></div>
+            <span className="text-xs text-slate-400">{stats.approvals.length}</span>
+          </div>
+          <div className="space-y-2">
+            {loading ? <p className="text-sm text-slate-400 text-center py-6">{t('loading')}</p>
+              : stats.approvals.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('noAlerts')}</p>
+              : stats.approvals.map((a) => (
+                <div key={`${a.table}-${a.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{a.name.charAt(0)}</div>
+                  <div className="min-w-0 flex-1"><p className="text-sm font-medium text-slate-900 dark:text-white truncate">{a.name}</p><p className="text-xs text-slate-400">{t(a.type as TranslationKey)} · {a.date}</p></div>
+                  <StatusControl value={a.status} onChange={(s) => decide(a.table, a.id, s)} />
+                </div>
+              ))}
+          </div>
+        </div>
+        <div className={`${card} flex flex-col items-center justify-center`}>
+          <h2 className="font-semibold text-slate-900 dark:text-white mb-2 self-start">{t('onboardingProgress')}</h2>
+          <ProgressRing value={obPct} color="#8b5cf6" label={t('completed')} sub={`${stats.onboarding.done} / ${stats.onboarding.total} ${t('tasksDone')}`} />
+          <Link href="/onboarding" className="mt-2 text-xs text-violet-600 dark:text-violet-400 hover:underline">{t('viewAll')}</Link>
+        </div>
+      </div>
+
+      {/* Branch bar + type bar + activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={card}>
+          <h2 className="font-semibold text-slate-900 dark:text-white mb-5">{t('employeesByBranch')}</h2>
+          {stats.byBranch.length ? <HBarChart data={stats.byBranch} /> : <p className="text-sm text-slate-400 text-center py-6">{t('noData')}</p>}
         </div>
         <div className={card}>
           <h2 className="font-semibold text-slate-900 dark:text-white mb-5">{t('requestsByType')}</h2>
